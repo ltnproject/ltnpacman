@@ -5,218 +5,201 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Christmas Pac-Mas 🎅</title>
     <style>
-        :root {
-            --gold: #ffd700;
-            --xmas-red: #c0392b;
-            --xmas-green: #27ae60;
-        }
-
+        :root { --gold: #ffd700; --red: #c0392b; --green: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
         body {
             background: radial-gradient(circle, #4b0000, #001100);
-            display: flex; flex-direction: column; align-items: center;
-            height: 100vh; font-family: 'Arial Black', sans-serif; color: #fff;
-            overflow: hidden; touch-action: none;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100vh; font-family: 'Arial Black', sans-serif; color: #fff; overflow: hidden;
         }
-
-        /* --- SCREEN EFFECTS --- */
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            20% { transform: translate(-3px, 0px) rotate(-1deg); }
-            40% { transform: translate(3px, 2px) rotate(1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            80% { transform: translate(3px, 1px) rotate(-1deg); }
-            100% { transform: translate(1px, -2px) rotate(0deg); }
+        #scoreBox { margin-bottom: 10px; font-size: 24px; color: var(--gold); text-shadow: 2px 2px #000; }
+        canvas { 
+            background: #000; border: 4px solid var(--gold); border-radius: 8px;
+            max-width: 95vw; max-height: 60vh; 
         }
-        .shake-effect { animation: shake 0.3s; }
-
-        .flash-effect {
-            position: fixed; inset: 0; background: white; opacity: 0;
-            pointer-events: none; z-index: 1000;
-        }
-        @keyframes flashAnim { 0% { opacity: 0.5; } 100% { opacity: 0; } }
-
-        /* --- UI ELEMENTS --- */
-        #gameWrapper {
-            display: flex; flex-direction: row; align-items: center; justify-content: center;
-            width: 100%; height: 100%; padding: 20px; gap: 40px;
-        }
-
-        canvas {
-            background: #000; border: 5px solid var(--gold); border-radius: 12px;
-            max-height: 85vh; max-width: 65vw; height: auto; width: auto;
-            box-shadow: 0 0 30px rgba(0,0,0,0.8);
-        }
-
-        .control-side { display: flex; flex-direction: column; gap: 20px; }
-        
+        .controls { margin-top: 20px; display: grid; grid-template-areas: ". up ." "left down right"; gap: 10px; }
         .btn {
-            width: 85px; height: 85px; background: rgba(192, 57, 43, 0.9);
-            border: 3px solid var(--gold); color: #fff; font-size: 32px;
-            cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 6px 0 #8e1e14; transition: 0.1s;
+            width: 65px; height: 65px; background: var(--red); border: 2px solid var(--gold);
+            color: white; font-size: 24px; border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 0 #6d1a12;
         }
-        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #8e1e14; background: var(--gold); color: #000; }
-
-        #scoreBox { position: absolute; top: 20px; font-size: 28px; color: var(--gold); text-shadow: 2px 2px #000; }
-
-        #statusOverlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-            display: none; flex-direction: column; align-items: center; justify-content: center;
-            z-index: 200;
+        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #6d1a12; background: var(--gold); }
+        #up { grid-area: up; } #down { grid-area: down; } #left { grid-area: left; } #right { grid-area: right; }
+        #overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
         }
-
-        @media (max-width: 900px) {
-            #gameWrapper { flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }
-            canvas { max-width: 95vw; max-height: 50vh; }
-            .control-side { flex-direction: row; }
-            .btn { width: 70px; height: 70px; }
-        }
+        .shake { animation: shake 0.2s ease-in-out; }
+        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
     </style>
 </head>
 <body>
 
-    <div id="flash" class="flash-effect"></div>
     <div id="scoreBox">SCORE: 0</div>
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
 
-    <div id="gameWrapper">
-        <div class="control-side">
-            <button class="btn" id="left">◄</button>
-        </div>
-
-        <canvas id="gameCanvas" width="560" height="620"></canvas>
-
-        <div class="control-side">
-            <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
-                <button class="btn" id="up">🎄</button>
-                <div style="display:flex; gap:15px;">
-                    <button class="btn" id="down">🎅</button>
-                    <button class="btn" id="right">►</button>
-                </div>
-            </div>
-        </div>
+    <div class="controls">
+        <button class="btn" id="up">🎄</button>
+        <button class="btn" id="left">◀</button>
+        <button class="btn" id="down">🎅</button>
+        <button class="btn" id="right">▶</button>
     </div>
 
-    <div id="statusOverlay">
-        <h1 id="statusText" style="font-size: 45px; margin-bottom: 25px; text-align: center;"></h1>
-        <button id="restartBtn" class="btn" style="width:220px; border-radius:15px; height: 60px;">🎁 RESTART</button>
+    <div id="overlay">
+        <h1 id="statusText">GAME OVER</h1>
+        <button class="btn" style="width:150px; border-radius:10px; margin-top:20px;" onclick="location.reload()">REPLAY</button>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const TILE = 20, ROWS = 31, COLS = 28;
-        let score = 0, gameOver = false, pellets = 0, superT = 0;
+        const TILE = 20; 
+        const SIZE = 20; // 20x20 grid
+        let score = 0;
+        let gameOver = false;
+        let powerMode = 0;
 
+        // 1 = Wall, 0 = Pellet, 2 = PowerUp, 3 = Empty
         const maze = [
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-            [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
-            [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-            [3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-            [1,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,2,1],
-            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
+            [1,2,1,1,0,1,0,1,1,1,1,1,1,0,1,0,1,1,2,1],
+            [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,0,1,1,3,1,1,1,1,1,1,3,1,1,0,1,1,1],
+            [1,1,1,0,1,3,3,3,3,3,3,3,3,3,3,1,0,1,1,1],
+            [1,0,0,0,1,3,1,1,1,3,3,1,1,1,3,1,0,0,0,1],
+            [1,0,1,0,0,3,1,3,3,3,3,3,3,1,3,0,0,1,0,1],
+            [1,0,1,0,1,3,1,1,1,1,1,1,1,1,3,1,0,1,0,1],
+            [1,0,0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0,0,1],
+            [1,1,1,0,1,1,1,1,1,3,3,1,1,1,1,1,0,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,1],
+            [1,2,1,1,1,1,0,1,1,1,1,1,1,0,1,1,1,1,2,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        for(let r=0; r<maze.length; r++) for(let c=0; c<COLS; c++) if(maze[r][c] < 2) pellets++;
-
-        let pacman = { x: 14, y: 12, dir: 0, next: 0, mouth: 1 };
+        let pacman = { x: 1, y: 1, dir: 0, nextDir: 0 };
         let ghosts = [
-            {x: 1, y: 1, c: '#ff4d4d', d: 0, s: false},
-            {x: 26, y: 1, c: '#2ecc71', d: 2, s: false}
+            { x: 9, y: 9, color: '#ff4d4d', dir: 0 },
+            { x: 10, y: 9, color: '#2ecc71', dir: 2 }
         ];
 
-        function triggerEffect(type) {
-            if(type === 'shake') {
-                canvas.classList.add('shake-effect');
-                setTimeout(() => canvas.classList.remove('shake-effect'), 300);
-            } else if(type === 'flash') {
-                const f = document.getElementById('flash');
-                f.style.animation = 'flashAnim 0.2s ease-out';
-                setTimeout(() => f.style.animation = '', 200);
+        function move(actor, dir) {
+            let dx = [1, 0, -1, 0][dir];
+            let dy = [0, 1, 0, -1][dir];
+            if (maze[actor.y + dy] && maze[actor.y + dy][actor.x + dx] !== 1) {
+                actor.x += dx;
+                actor.y += dy;
+                return true;
             }
-        }
-
-        function draw() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            for(let r=0; r<maze.length; r++) {
-                for(let c=0; c<COLS; c++) {
-                    if(maze[r][c] === 1) {
-                        ctx.fillStyle = '#0a2e0a'; ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
-                        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(c*TILE, r*TILE, TILE, TILE);
-                    } else if(maze[r][c] === 0) {
-                        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c*TILE+10, r*TILE+10, 2, 0, 7); ctx.fill();
-                    } else if(maze[r][c] === 2) {
-                        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(c*TILE+10, r*TILE+10, 6, 0, 7); ctx.fill();
-                    }
-                }
-            }
-
-            // Pacman 🎅
-            ctx.save();
-            ctx.translate(pacman.x*TILE+10, pacman.y*TILE+10);
-            ctx.rotate(pacman.dir * Math.PI/2);
-            ctx.fillStyle = superT > 0 ? '#fff' : '#ffff00';
-            ctx.beginPath();
-            let m = pacman.mouth ? 0.6 : 0.1;
-            ctx.arc(0,0, 9, m, Math.PI*2-m); ctx.lineTo(0,0); ctx.fill();
-            ctx.restore();
-
-            // Ghosts ☃️
-            ghosts.forEach(g => {
-                ctx.fillStyle = g.s ? '#abdcfb' : g.c;
-                ctx.beginPath(); ctx.arc(g.x*TILE+10, g.y*TILE+10, 8, 0, 7); ctx.fill();
-            });
+            return false;
         }
 
         function update() {
-            if(gameOver) return;
-            let spd = superT > 0 ? 2 : 1;
-            for(let i=0; i<spd; i++) {
-                let dx = [1,0,-1,0][pacman.next], dy = [0,1,0,-1][pacman.next];
-                if(maze[pacman.y+dy]?.[pacman.x+dx] !== 1) pacman.dir = pacman.next;
-                dx = [1,0,-1,0][pacman.dir], dy = [0,1,0,-1][pacman.dir];
-                if(maze[pacman.y+dy]?.[pacman.x+dx] !== 1) {
-                    pacman.x += dx; pacman.y += dy;
-                    if(maze[pacman.y][pacman.x] === 0) { score += 10; pellets--; maze[pacman.y][pacman.x] = 3; }
-                    if(maze[pacman.y][pacman.x] === 2) { 
-                        score += 50; pellets--; maze[pacman.y][pacman.x] = 3; 
-                        superT = 50; triggerEffect('flash');
-                        ghosts.forEach(g => g.s = true);
-                        setTimeout(() => ghosts.forEach(g => g.s = false), 5000);
+            if (gameOver) return;
+
+            // Pacman tries to turn
+            let dx = [1, 0, -1, 0][pacman.nextDir];
+            let dy = [0, 1, 0, -1][pacman.nextDir];
+            if (maze[pacman.y + dy] && maze[pacman.y + dy][pacman.x + dx] !== 1) {
+                pacman.dir = pacman.nextDir;
+            }
+            move(pacman, pacman.dir);
+
+            // Handle Pellets
+            if (maze[pacman.y][pacman.x] === 0) {
+                maze[pacman.y][pacman.x] = 3;
+                score += 10;
+            } else if (maze[pacman.y][pacman.x] === 2) {
+                maze[pacman.y][pacman.x] = 3;
+                score += 50;
+                powerMode = 30;
+            }
+            document.getElementById('scoreBox').innerText = `SCORE: ${score}`;
+
+            // Ghosts Move
+            ghosts.forEach(g => {
+                if (!move(g, g.dir)) {
+                    g.dir = Math.floor(Math.random() * 4);
+                }
+                if (g.x === pacman.x && g.y === pacman.y) {
+                    if (powerMode > 0) {
+                        g.x = 9; g.y = 9; // Eat ghost
+                        score += 200;
+                    } else {
+                        endGame("❄️ FROZEN! ❄️");
                     }
-                    document.getElementById('scoreBox').innerText = "SCORE: " + score;
-                    if(pellets <= 0) end("🏆 CHRISTMAS SAVED! 🏆");
+                }
+            });
+
+            if (powerMode > 0) powerMode--;
+        }
+
+        function draw() {
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let r = 0; r < maze.length; r++) {
+                for (let c = 0; c < maze[r].length; c++) {
+                    if (maze[r][c] === 1) {
+                        ctx.fillStyle = "#0a2e0a";
+                        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+                        ctx.strokeStyle = "#ffd700";
+                        ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+                    } else if (maze[r][c] === 0) {
+                        ctx.fillStyle = "white";
+                        ctx.beginPath(); ctx.arc(c * TILE + 10, r * TILE + 10, 2, 0, 7); ctx.fill();
+                    } else if (maze[r][c] === 2) {
+                        ctx.fillStyle = "#ffd700";
+                        ctx.beginPath(); ctx.arc(c * TILE + 10, r * TILE + 10, 5, 0, 7); ctx.fill();
+                    }
                 }
             }
-            if(superT > 0) superT--;
-            pacman.mouth = !pacman.mouth;
 
+            // Draw Pacman
+            ctx.fillStyle = powerMode > 0 ? "white" : "yellow";
+            ctx.beginPath();
+            ctx.arc(pacman.x * TILE + 10, pacman.y * TILE + 10, 8, 0.2, Math.PI * 2 - 0.2);
+            ctx.lineTo(pacman.x * TILE + 10, pacman.y * TILE + 10);
+            ctx.fill();
+
+            // Draw Ghosts
             ghosts.forEach(g => {
-                let gd = Math.floor(Math.random()*4);
-                let gdx = [1,0,-1,0][gd], gdy = [0,1,0,-1][gd];
-                if(maze[g.y+gdy]?.[g.x+gdx] !== 1) { g.x+=gdx; g.y+=gdy; }
-                if(g.x === pacman.x && g.y === pacman.y && !g.s) { triggerEffect('shake'); end("❄️ FROZEN! ❄️"); }
+                ctx.fillStyle = powerMode > 0 ? "#80d4ff" : g.color;
+                ctx.beginPath(); ctx.arc(g.x * TILE + 10, g.y * TILE + 10, 8, 0, 7); ctx.fill();
             });
         }
 
-        function end(t) { gameOver = true; document.getElementById('statusText').innerText = t; document.getElementById('statusOverlay').style.display = 'flex'; }
+        function endGame(msg) {
+            gameOver = true;
+            canvas.classList.add('shake');
+            document.getElementById('statusText').innerText = msg;
+            document.getElementById('overlay').style.display = 'flex';
+        }
+
+        function loop() {
+            update();
+            draw();
+            if (!gameOver) setTimeout(loop, 150);
+        }
+
+        // Controls
+        document.getElementById('up').onclick = () => pacman.nextDir = 3;
+        document.getElementById('down').onclick = () => pacman.nextDir = 1;
+        document.getElementById('left').onclick = () => pacman.nextDir = 2;
+        document.getElementById('right').onclick = () => pacman.nextDir = 0;
         
-        function loop() { draw(); update(); if(!gameOver) setTimeout(loop, 80); }
-        
-        document.getElementById('up').onclick = () => pacman.next = 3;
-        document.getElementById('down').onclick = () => pacman.next = 1;
-        document.getElementById('left').onclick = () => pacman.next = 2;
-        document.getElementById('right').onclick = () => pacman.next = 0;
-        document.getElementById('restartBtn').onclick = () => location.reload();
+        window.addEventListener('keydown', e => {
+            if(e.key === "ArrowUp") pacman.nextDir = 3;
+            if(e.key === "ArrowDown") pacman.nextDir = 1;
+            if(e.key === "ArrowLeft") pacman.nextDir = 2;
+            if(e.key === "ArrowRight") pacman.nextDir = 0;
+        });
 
         loop();
     </script>
