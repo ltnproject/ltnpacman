@@ -1,242 +1,283 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pac-Man Christmas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Pac-Mas 🎅</title>
+    <style>
+        :root {
+            --gold: #ffd700;
+            --xmas-red: #c0392b;
+            --xmas-green: #27ae60;
+        }
 
-<style>
-* { box-sizing: border-box; }
-body {
-    background: #000;
-    color: #fff;
-    font-family: 'Courier New', monospace;
-    text-align: center;
-}
-#title {
-    color: #ff3333;
-    font-size: 36px;
-    text-shadow: 0 0 10px #0f0;
-}
-#score { font-size: 22px; margin-bottom: 8px; }
-canvas {
-    border: 4px solid #00aaff;
-    background: #000;
-}
-#gameOver {
-    font-size: 22px;
-    margin-top: 10px;
-    display: none;
-}
-button {
-    padding: 10px 25px;
-    font-size: 18px;
-    margin-top: 10px;
-    background: #ff3333;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-}
-</style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: linear-gradient(135deg, #7f0d0d, #003300);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            min-height: 100vh; font-family: 'Courier New', monospace; color: #fff;
+            touch-action: none; overflow: hidden;
+        }
+
+        /* --- CHRISTMAS LIGHTS --- */
+        .lightrope {
+            text-align: center; white-space: nowrap; overflow: hidden; position: absolute;
+            z-index: 10; top: 0; width: 100%; display: flex; justify-content: space-around;
+            padding: 0; pointer-events: none;
+        }
+        .lightrope span {
+            width: 12px; height: 28px; border-radius: 50%; display: inline-block;
+            animation: flash 1.5s infinite;
+        }
+        .lightrope span:nth-child(4n+1) { background: #ff4d4d; animation-delay: 0.5s; }
+        .lightrope span:nth-child(4n+2) { background: #2ecc71; animation-delay: 1s; }
+        .lightrope span:nth-child(4n+3) { background: #3498db; animation-delay: 1.5s; }
+        .lightrope span:nth-child(4n+4) { background: #f1c40f; animation-delay: 2s; }
+
+        @keyframes flash {
+            0%, 100% { opacity: 1; box-shadow: 0 0 10px #fff; }
+            50% { opacity: 0.4; box-shadow: none; }
+        }
+
+        /* --- SNOW ANIMATION --- */
+        .snow-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        .snowflake { position: absolute; top: -10%; color: #fff; font-size: 1.5em; user-select: none; animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
+
+        /* --- GAME UI --- */
+        #gameContainer {
+            text-align: center; z-index: 10; background: rgba(0, 0, 0, 0.8);
+            padding: 20px; border-radius: 15px; border: 4px ridge var(--gold);
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.3);
+        }
+
+        #banner { font-size: 1.2rem; color: var(--gold); margin-bottom: 10px; font-weight: bold; }
+        #title { font-size: 32px; margin-bottom: 15px; color: #fff; text-shadow: 0 0 10px var(--xmas-red); }
+        canvas { border: 5px solid var(--gold); background: #000; max-width: 100%; height: auto; }
+
+        #controls { margin-top: 15px; display: grid; grid-template-columns: repeat(3, 60px); gap: 5px; justify-content: center; }
+        .btn {
+            width: 60px; height: 60px; background: var(--xmas-red); border: 2px solid var(--gold);
+            color: #fff; font-size: 24px; cursor: pointer; border-radius: 10px;
+        }
+
+        #audioControl {
+            background: var(--xmas-green); padding: 8px 15px; border: 2px solid var(--gold);
+            border-radius: 20px; color: white; cursor: pointer; margin-bottom: 10px; font-weight: bold;
+        }
+
+        #statusMessage { font-size: 24px; margin: 10px 0; display: none; }
+    </style>
 </head>
-
 <body>
 
-<div id="title">🎄 PAC-MAN 🎄</div>
-<div id="score">SCORE: 0</div>
-<canvas id="gameCanvas" width="560" height="620"></canvas>
-<div id="gameOver"></div>
-<button onclick="location.reload()">RESTART</button>
+    <div class="lightrope" id="rope"></div>
+    <div class="snow-container" id="snow"></div>
 
-<script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+    <div id="gameContainer">
+        <div id="banner">🎄 Merry Christmas & Happy Holidays! ❄️</div>
+        <div id="title">🎅 PAC-MAS ADVENTURE 🎁</div>
+        
+        <button id="audioControl">🔊 Play Jingle Bells 🎵</button>
+        <div id="score" style="color: var(--gold); font-size: 20px; margin-bottom: 5px;">SCORE: 0</div>
+        
+        <canvas id="gameCanvas" width="560" height="620"></canvas>
+        
+        <div id="statusMessage"></div>
+        <button id="restartBtn" class="btn" style="width: auto; padding: 0 20px; display:none; margin: 10px auto;">🎁 Play Again</button>
 
-const TILE = 20;
-const ROWS = 31;
-const COLS = 28;
+        <div id="controls">
+            <button class="btn" id="up">🎄</button>
+            <button class="btn" id="left" style="grid-row: 2; grid-column: 1;">◄</button>
+            <button class="btn" id="down" style="grid-row: 2; grid-column: 2;">🎅</button>
+            <button class="btn" id="right" style="grid-row: 2; grid-column: 3;">►</button>
+        </div>
+    </div>
 
-let score = 0;
-let gameOver = false;
-let pelletsLeft = 0;
+    <script>
+        // --- DECORATIONS ---
+        const rope = document.getElementById('rope');
+        for(let i=0; i<30; i++) rope.appendChild(document.createElement('span'));
+        const snow = document.getElementById('snow');
+        setInterval(() => {
+            const flake = document.createElement('div');
+            flake.className = 'snowflake'; flake.innerHTML = '❄';
+            flake.style.left = Math.random() * 100 + 'vw';
+            flake.style.animationDuration = (Math.random() * 3 + 2) + 's';
+            snow.appendChild(flake);
+            setTimeout(() => flake.remove(), 5000);
+        }, 150);
 
-const maze = ${JSON.stringify([
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-[1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-[1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-[1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
-[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-[1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
-[1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
-[1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-[1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-[3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
-[1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
-[1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-[1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
-[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-])};
+        // --- GAME LOGIC ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const statusEl = document.getElementById('statusMessage');
+        const restartBtn = document.getElementById('restartBtn');
 
-maze.forEach(r=>r.forEach(c=>{
-    if(c===0||c===2) pelletsLeft++;
-}));
+        const TILE = 20;
+        const ROWS = 31;
+        const COLS = 28;
+        let score = 0;
+        let gameOver = false;
+        let totalPellets = 0;
+        let giftPos = null; // Power-up position
+        let superMode = 0;  // Frames remaining for super speed
 
-let pacman = { x:14, y:12, dir:0, next:0, mouth:0, open:true };
+        const maze = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,1,3,3,1,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
+            [3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
+            [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
+            [1,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,2,1],
+            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
+            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
 
-let ghosts = [
-{ x:14, y:9, color:"#ff0000", dir:0, scared:false },
-{ x:13, y:9, color:"#00ffff", dir:2, scared:false },
-{ x:15, y:9, color:"#ffb852", dir:1, scared:false },
-{ x:14, y:10, color:"#ffb8ff", dir:3, scared:false }
-];
+        for(let r=0; r<ROWS; r++) for(let c=0; c<COLS; c++) if(maze[r][c] === 0 || maze[r][c] === 2) totalPellets++;
 
-let scaredTimer = 0;
+        let pacman = { x: 14, y: 23, dir: 0, nextDir: 0, mouthOpen: true };
+        let ghosts = [
+            {x: 14, y: 11, color: '#ff4d4d', dir: 0, scared: false},
+            {x: 12, y: 14, color: '#2ecc71', dir: 2, scared: false},
+            {x: 14, y: 14, color: '#3498db', dir: 3, scared: false},
+            {x: 16, y: 14, color: '#f1c40f', dir: 1, scared: false}
+        ];
 
-function canMove(x,y){
-    return maze[y]?.[x] !== 1;
-}
+        // Spawn Gift Box periodically
+        setInterval(() => {
+            if(!gameOver) {
+                let rx, ry;
+                do { rx = Math.floor(Math.random()*COLS); ry = Math.floor(Math.random()*ROWS); }
+                while(maze[ry][rx] === 1);
+                giftPos = {x: rx, y: ry};
+            }
+        }, 15000);
 
-function drawMaze(){
-    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
-        if(maze[y]?.[x]===1){
-            ctx.fillStyle="#0033ff";
-            ctx.fillRect(x*TILE,y*TILE,TILE,TILE);
+        function drawMaze() {
+            for(let r = 0; r < ROWS; r++) {
+                for(let c = 0; c < COLS; c++) {
+                    if(maze[r][c] === 1) {
+                        ctx.fillStyle = '#1e5d2d'; ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
+                        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 0.5; ctx.strokeRect(c*TILE, r*TILE, TILE, TILE);
+                    } else if(maze[r][c] === 0) {
+                        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c*TILE+TILE/2, r*TILE+TILE/2, 2, 0, 7); ctx.fill();
+                    } else if(maze[r][c] === 2) {
+                        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(c*TILE+TILE/2, r*TILE+TILE/2, 6, 0, 7); ctx.fill();
+                    }
+                }
+            }
+            if(giftPos) {
+                ctx.font = "16px Arial"; ctx.fillText("🎁", giftPos.x*TILE+2, giftPos.y*TILE+16);
+            }
         }
-        if(maze[y]?.[x]===0){
-            ctx.fillStyle="#fff"; // snow pellets ❄️
+
+        function drawPacman() {
+            ctx.save();
+            ctx.translate(pacman.x*TILE+TILE/2, pacman.y*TILE+TILE/2);
+            ctx.rotate(pacman.dir * Math.PI/2);
+            ctx.fillStyle = superMode > 0 ? '#ff0000' : '#ffff00';
+            if(superMode > 0) ctx.shadowBlur = 15, ctx.shadowColor = "white";
             ctx.beginPath();
-            ctx.arc(x*TILE+10,y*TILE+10,2,0,Math.PI*2);
-            ctx.fill();
+            let mouth = pacman.mouthOpen ? 0.6 : 0.1;
+            ctx.arc(0, 0, TILE/2-2, mouth, Math.PI*2-mouth); ctx.lineTo(0,0); ctx.fill();
+            ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.moveTo(-5,-5); ctx.lineTo(5,-5); ctx.lineTo(0,-12); ctx.fill();
+            ctx.restore();
         }
-        if(maze[y]?.[x]===2){
-            ctx.fillStyle="#00ffcc";
-            ctx.beginPath();
-            ctx.arc(x*TILE+10,y*TILE+10,5,0,Math.PI*2);
-            ctx.fill();
+
+        function move() {
+            if(gameOver) return;
+            let speed = superMode > 0 ? 2 : 1;
+            for(let i=0; i<speed; i++) {
+                let dx = [1, 0, -1, 0][pacman.nextDir], dy = [0, 1, 0, -1][pacman.nextDir];
+                if(maze[pacman.y+dy]?.[pacman.x+dx] !== 1) pacman.dir = pacman.nextDir;
+                dx = [1, 0, -1, 0][pacman.dir]; dy = [0, 1, 0, -1][pacman.dir];
+                if(maze[pacman.y+dy]?.[pacman.x+dx] !== 1) {
+                    pacman.x += dx; pacman.y += dy;
+                    if(giftPos && pacman.x === giftPos.x && pacman.y === giftPos.y) {
+                        superMode = 35; giftPos = null; score += 100;
+                    }
+                    if(maze[pacman.y][pacman.x] === 0 || maze[pacman.y][pacman.x] === 2) {
+                        if(maze[pacman.y][pacman.x] === 2) ghosts.forEach(g => g.scared = true);
+                        maze[pacman.y][pacman.x] = 3; score += 10; totalPellets--;
+                        scoreEl.innerText = "SCORE: " + score;
+                        if(totalPellets <= 0) { gameOver = true; statusEl.innerHTML = "🏆 YOU SAVED CHRISTMAS! 🏆"; statusEl.style.display="block"; restartBtn.style.display="block"; }
+                    }
+                }
+            }
+            if(superMode > 0) superMode--;
+            pacman.mouthOpen = !pacman.mouthOpen;
+
+            ghosts.forEach(g => {
+                let gd = Math.floor(Math.random()*4);
+                let gdx = [1,0,-1,0][gd], gdy = [0,1,0,-1][gd];
+                if(maze[g.y+gdy]?.[g.x+gdx] !== 1) { g.x+=gdx; g.y+=gdy; }
+                if(g.x === pacman.x && g.y === pacman.y && !g.scared) {
+                    gameOver = true; statusEl.innerHTML = "❄️ FROZEN! GAME OVER ❄️"; statusEl.style.display = "block"; restartBtn.style.display = "block";
+                }
+            });
         }
-    }
-}
 
-function drawPacman(){
-    ctx.save();
-    ctx.translate(pacman.x*TILE+10,pacman.y*TILE+10);
-    ctx.rotate(pacman.dir*Math.PI/2);
-    ctx.fillStyle="#ffcc00";
-    let m=pacman.open?pacman.mouth:0;
-    ctx.beginPath();
-    ctx.arc(0,0,9,m,Math.PI*2-m);
-    ctx.lineTo(0,0);
-    ctx.fill();
-
-    // 🎅 Santa hat
-    ctx.fillStyle="red";
-    ctx.fillRect(-8,-14,16,6);
-    ctx.fillStyle="white";
-    ctx.fillRect(-8,-18,16,4);
-    ctx.beginPath();
-    ctx.arc(8,-18,3,0,Math.PI*2);
-    ctx.fill();
-
-    ctx.restore();
-}
-
-function movePacman(){
-    let dx=[1,0,-1,0][pacman.dir];
-    let dy=[0,1,0,-1][pacman.dir];
-    let ndx=[1,0,-1,0][pacman.next];
-    let ndy=[0,1,0,-1][pacman.next];
-
-    if(canMove(pacman.x+ndx,pacman.y+ndy)) pacman.dir=pacman.next;
-    if(canMove(pacman.x+dx,pacman.y+dy)){
-        pacman.x+=dx;
-        pacman.y+=dy;
-    }
-
-    if(pacman.x<0) pacman.x=COLS-1;
-    if(pacman.x>=COLS) pacman.x=0;
-
-    let cell=maze[pacman.y]?.[pacman.x];
-    if(cell===0||cell===2){
-        maze[pacman.y][pacman.x]=3;
-        pelletsLeft--;
-        score+=cell===2?50:10;
-        document.getElementById("score").textContent="SCORE: "+score;
-        if(cell===2){
-            scaredTimer=120;
-            ghosts.forEach(g=>g.scared=true);
+        function gameLoop() {
+            ctx.clearRect(0,0,560,620);
+            drawMaze(); move(); drawPacman();
+            ghosts.forEach(g => {
+                ctx.fillStyle = g.scared ? '#2980b9' : g.color;
+                ctx.beginPath(); ctx.arc(g.x*TILE+TILE/2, g.y*TILE+TILE/2-2, TILE/2-2, Math.PI, 0); ctx.lineTo(g.x*TILE+TILE-2, g.y*TILE+TILE-2); ctx.lineTo(g.x*TILE+2, g.y*TILE+TILE-2); ctx.fill();
+            });
+            if(!gameOver) setTimeout(gameLoop, 150);
         }
-    }
 
-    pacman.mouth+=pacman.open?0.1:-0.1;
-    if(pacman.mouth>=0.6||pacman.mouth<=0) pacman.open=!pacman.open;
-}
+        let audioCtx;
+        document.getElementById('audioControl').addEventListener('click', function() {
+            if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const notes = [659, 659, 659, 659, 659, 659, 659, 783, 523, 587, 659];
+            let now = audioCtx.currentTime;
+            notes.forEach((f, i) => {
+                let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain();
+                osc.frequency.value = f; osc.connect(gain); gain.connect(audioCtx.destination);
+                gain.gain.setValueAtTime(0.1, now+i*0.3); gain.gain.exponentialRampToValueAtTime(0.01, now+i*0.3+0.2);
+                osc.start(now+i*0.3); osc.stop(now+i*0.3+0.2);
+            });
+        });
 
-function drawGhosts(){
-    ghosts.forEach(g=>{
-        ctx.fillStyle=g.scared?"#00aaff":g.color;
-        ctx.beginPath();
-        ctx.arc(g.x*TILE+10,g.y*TILE+10,9,Math.PI,0);
-        ctx.lineTo(g.x*TILE+19,g.y*TILE+19);
-        ctx.lineTo(g.x*TILE+1,g.y*TILE+19);
-        ctx.fill();
-    });
-}
+        window.addEventListener('keydown', e => {
+            if(e.key === 'ArrowRight') pacman.nextDir = 0; if(e.key === 'ArrowDown') pacman.nextDir = 1;
+            if(e.key === 'ArrowLeft') pacman.nextDir = 2; if(e.key === 'ArrowUp') pacman.nextDir = 3;
+        });
 
-function moveGhosts(){
-    if(scaredTimer>0){
-        scaredTimer--;
-        if(scaredTimer===0) ghosts.forEach(g=>g.scared=false);
-    }
+        document.getElementById('up').onclick = () => pacman.nextDir = 3;
+        document.getElementById('down').onclick = () => pacman.nextDir = 1;
+        document.getElementById('left').onclick = () => pacman.nextDir = 2;
+        document.getElementById('right').onclick = () => pacman.nextDir = 0;
+        restartBtn.onclick = () => location.reload();
 
-    ghosts.forEach(g=>{
-        let options=[];
-        for(let d=0;d<4;d++){
-            let dx=[1,0,-1,0][d];
-            let dy=[0,1,0,-1][d];
-            if(canMove(g.x+dx,g.y+dy)&&d!==(g.dir+2)%4) options.push(d);
-        }
-        if(options.length){
-            g.dir=g.scared
-                ? options[Math.floor(Math.random()*options.length)]
-                : options.sort((a,b)=>{
-                    let da=Math.abs(g.x+[1,0,-1,0][a]-pacman.x)+Math.abs(g.y+[0,1,0,-1][a]-pacman.y);
-                    let db=Math.abs(g.x+[1,0,-1,0][b]-pacman.x)+Math.abs(g.y+[0,1,0,-1][b]-pacman.y);
-                    return da-db;
-                })[0];
-        }
-        g.x+=[1,0,-1,0][g.dir];
-        g.y+=[0,1,0,-1][g.dir];
-    });
-}
-
-function checkEnd(){
-    if(pelletsLeft<=0){
-        gameOver=true;
-        const g=document.getElementById("gameOver");
-        g.textContent="🎄 YOU WIN! 🎄";
-        g.style.display="block";
-    }
-}
-
-document.addEventListener("keydown",e=>{
-    if(e.key==="ArrowRight") pacman.next=0;
-    if(e.key==="ArrowDown") pacman.next=1;
-    if(e.key==="ArrowLeft") pacman.next=2;
-    if(e.key==="ArrowUp") pacman.next=3;
-});
-
-function loop(){
-    if(gameOver) return;
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    drawMaze();
-    movePacman();
-    moveGhosts();
-    drawPacman();
-    drawGhosts();
-    checkEnd();
-    setTimeout(loop,160); // 🐢 REAL SPEED
-}
-loop();
-</script>
+        gameLoop();
+    </script>
 </body>
 </html>
