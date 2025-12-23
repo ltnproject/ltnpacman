@@ -7,35 +7,46 @@
     <style>
         :root { --gold: #ffd700; --red: #c0392b; --green: #27ae60; }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body {
             background: radial-gradient(circle, #4b0000, #001100);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             height: 100vh; font-family: 'Arial Black', sans-serif; color: #fff; overflow: hidden;
+            touch-action: none;
         }
-        #scoreBox { margin-bottom: 10px; font-size: 24px; color: var(--gold); text-shadow: 2px 2px #000; }
+
+        #scoreBox { margin-bottom: 15px; font-size: 28px; color: var(--gold); text-shadow: 2px 2px #000; z-index: 5; }
+        
         canvas { 
             background: #000; border: 4px solid var(--gold); border-radius: 8px;
-            max-width: 95vw; max-height: 60vh; 
+            max-width: 95vw; max-height: 55vh; box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+            z-index: 5;
         }
-        .controls { margin-top: 20px; display: grid; grid-template-areas: ". up ." "left down right"; gap: 10px; }
+
+        .controls { margin-top: 20px; display: grid; grid-template-areas: ". up ." "left down right"; gap: 12px; z-index: 5; }
+        
         .btn {
-            width: 65px; height: 65px; background: var(--red); border: 2px solid var(--gold);
-            color: white; font-size: 24px; border-radius: 50%; cursor: pointer;
+            width: 70px; height: 70px; background: var(--red); border: 3px solid var(--gold);
+            color: white; font-size: 28px; border-radius: 50%; cursor: pointer;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 0 #6d1a12;
+            box-shadow: 0 5px 0 #6d1a12; transition: 0.1s;
         }
-        .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #6d1a12; background: var(--gold); }
+        .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #6d1a12; background: var(--gold); color: #000; }
+
         #up { grid-area: up; } #down { grid-area: down; } #left { grid-area: left; } #right { grid-area: right; }
+
         #overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85);
-            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10;
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
         }
-        .shake { animation: shake 0.2s ease-in-out; }
-        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+
+        /* Snow effect */
+        .snow { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
     </style>
 </head>
 <body>
 
+    <canvas class="snow" id="snowCanvas"></canvas>
     <div id="scoreBox">SCORE: 0</div>
     <canvas id="gameCanvas" width="400" height="400"></canvas>
 
@@ -47,34 +58,31 @@
     </div>
 
     <div id="overlay">
-        <h1 id="statusText">GAME OVER</h1>
-        <button class="btn" style="width:150px; border-radius:10px; margin-top:20px;" onclick="location.reload()">REPLAY</button>
+        <h1 id="statusText" style="font-size: 40px; text-align: center;"></h1>
+        <button class="btn" style="width:180px; border-radius:15px; margin-top:30px; font-size: 20px;" onclick="location.reload()">🎁 REPLAY</button>
     </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const TILE = 20; 
-        const SIZE = 20; // 20x20 grid
-        let score = 0;
-        let gameOver = false;
-        let powerMode = 0;
+        let score = 0, gameOver = false, powerMode = 0, pellets = 0;
 
-        // 1 = Wall, 0 = Pellet, 2 = PowerUp, 3 = Empty
+        // 1=Wall, 0=Pellet, 2=PowerUp, 3=Path, 4=Spawn Exit
         const maze = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-            [1,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,1],
-            [1,2,1,1,0,1,0,1,1,1,1,1,1,0,1,0,1,1,2,1],
-            [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,1,0,0,0,1,1,0,0,0,1,0,0,0,0,1],
+            [1,2,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,2,1],
+            [1,0,0,0,0,0,0,1,0,0,0,0,1,0,0,0,0,0,0,1],
+            [1,0,1,1,0,1,1,1,1,4,4,1,1,1,1,0,1,1,0,1],
+            [1,0,0,0,0,0,0,0,1,3,3,1,0,0,0,0,0,0,0,1],
+            [1,1,1,0,1,1,1,0,1,3,3,1,0,1,1,1,0,1,1,1],
+            [1,1,1,0,1,0,0,0,0,3,3,0,0,0,0,1,0,1,1,1],
+            [1,0,0,0,1,0,1,1,1,1,1,1,1,1,0,1,0,0,0,1],
+            [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1],
+            [1,0,1,0,1,1,1,0,1,1,1,1,0,1,1,1,0,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,1,1,0,1,1,3,1,1,1,1,1,1,3,1,1,0,1,1,1],
-            [1,1,1,0,1,3,3,3,3,3,3,3,3,3,3,1,0,1,1,1],
-            [1,0,0,0,1,3,1,1,1,3,3,1,1,1,3,1,0,0,0,1],
-            [1,0,1,0,0,3,1,3,3,3,3,3,3,1,3,0,0,1,0,1],
-            [1,0,1,0,1,3,1,1,1,1,1,1,1,1,3,1,0,1,0,1],
-            [1,0,0,0,1,3,3,3,3,3,3,3,3,3,3,1,0,0,0,1],
-            [1,1,1,0,1,1,1,1,1,3,3,1,1,1,1,1,0,1,1,1],
+            [1,1,1,0,1,1,1,1,1,0,0,1,1,1,1,1,0,1,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,0,1,1,1,0,1,1,0,1,1,1,0,1,1,0,1],
             [1,0,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,1],
@@ -85,55 +93,67 @@
 
         let pacman = { x: 1, y: 1, dir: 0, nextDir: 0 };
         let ghosts = [
-            { x: 9, y: 9, color: '#ff4d4d', dir: 0 },
-            { x: 10, y: 9, color: '#2ecc71', dir: 2 }
+            { x: 9, y: 7, color: '#ff4d4d', dir: 3 },
+            { x: 10, y: 7, color: '#2ecc71', dir: 3 }
         ];
 
-        function move(actor, dir) {
-            let dx = [1, 0, -1, 0][dir];
-            let dy = [0, 1, 0, -1][dir];
-            if (maze[actor.y + dy] && maze[actor.y + dy][actor.x + dx] !== 1) {
-                actor.x += dx;
-                actor.y += dy;
-                return true;
-            }
-            return false;
+        // Count pellets
+        maze.forEach(row => row.forEach(tile => { if(tile===0||tile===2) pellets++; }));
+
+        function canMove(actor, d) {
+            let dx = [1, 0, -1, 0][d], dy = [0, 1, 0, -1][d];
+            let target = maze[actor.y + dy]?.[actor.x + dx];
+            return target !== 1;
         }
 
         function update() {
             if (gameOver) return;
 
-            // Pacman tries to turn
-            let dx = [1, 0, -1, 0][pacman.nextDir];
-            let dy = [0, 1, 0, -1][pacman.nextDir];
-            if (maze[pacman.y + dy] && maze[pacman.y + dy][pacman.x + dx] !== 1) {
-                pacman.dir = pacman.nextDir;
+            // Pacman logic
+            if (canMove(pacman, pacman.nextDir)) pacman.dir = pacman.nextDir;
+            if (canMove(pacman, pacman.dir)) {
+                pacman.x += [1, 0, -1, 0][pacman.dir];
+                pacman.y += [0, 1, 0, -1][pacman.dir];
             }
-            move(pacman, pacman.dir);
 
-            // Handle Pellets
-            if (maze[pacman.y][pacman.x] === 0) {
-                maze[pacman.y][pacman.x] = 3;
-                score += 10;
-            } else if (maze[pacman.y][pacman.x] === 2) {
-                maze[pacman.y][pacman.x] = 3;
-                score += 50;
-                powerMode = 30;
-            }
+            // Eating
+            let current = maze[pacman.y][pacman.x];
+            if (current === 0) { maze[pacman.y][pacman.x] = 3; score += 10; pellets--; }
+            if (current === 2) { maze[pacman.y][pacman.x] = 3; score += 50; powerMode = 40; pellets--; }
             document.getElementById('scoreBox').innerText = `SCORE: ${score}`;
+            if (pellets <= 0) endGame("🎄 SAVED XMAS! 🎄");
 
-            // Ghosts Move
+            // Ghost AI
             ghosts.forEach(g => {
-                if (!move(g, g.dir)) {
-                    g.dir = Math.floor(Math.random() * 4);
-                }
-                if (g.x === pacman.x && g.y === pacman.y) {
-                    if (powerMode > 0) {
-                        g.x = 9; g.y = 9; // Eat ghost
-                        score += 200;
-                    } else {
-                        endGame("❄️ FROZEN! ❄️");
+                let possible = [];
+                [0, 1, 2, 3].forEach(d => {
+                    if (canMove(g, d)) {
+                        if (Math.abs(d - g.dir) !== 2) possible.push(d); // No instant U-turns
                     }
+                });
+
+                if (possible.length > 0) {
+                    // 30% chance to be smart and chase, 70% random
+                    if (Math.random() < 0.3 && powerMode === 0) {
+                        if (pacman.x > g.x && possible.includes(0)) g.dir = 0;
+                        else if (pacman.y > g.y && possible.includes(1)) g.dir = 1;
+                        else if (pacman.x < g.x && possible.includes(2)) g.dir = 2;
+                        else if (pacman.y < g.y && possible.includes(3)) g.dir = 3;
+                        else g.dir = possible[Math.floor(Math.random() * possible.length)];
+                    } else if (possible.length > 1 || !canMove(g, g.dir)) {
+                        g.dir = possible[Math.floor(Math.random() * possible.length)];
+                    }
+                } else {
+                    g.dir = (g.dir + 2) % 4; // U-turn if dead end
+                }
+
+                g.x += [1, 0, -1, 0][g.dir];
+                g.y += [0, 1, 0, -1][g.dir];
+
+                // Collision
+                if (g.x === pacman.x && g.y === pacman.y) {
+                    if (powerMode > 0) { g.x = 9; g.y = 7; score += 200; }
+                    else endGame("❄️ FROZEN! ❄️");
                 }
             });
 
@@ -146,62 +166,66 @@
 
             for (let r = 0; r < maze.length; r++) {
                 for (let c = 0; c < maze[r].length; c++) {
-                    if (maze[r][c] === 1) {
-                        ctx.fillStyle = "#0a2e0a";
-                        ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-                        ctx.strokeStyle = "#ffd700";
-                        ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
-                    } else if (maze[r][c] === 0) {
-                        ctx.fillStyle = "white";
-                        ctx.beginPath(); ctx.arc(c * TILE + 10, r * TILE + 10, 2, 0, 7); ctx.fill();
-                    } else if (maze[r][c] === 2) {
-                        ctx.fillStyle = "#ffd700";
-                        ctx.beginPath(); ctx.arc(c * TILE + 10, r * TILE + 10, 5, 0, 7); ctx.fill();
+                    let tile = maze[r][c];
+                    if (tile === 1) {
+                        ctx.fillStyle = "#0a2e0a"; ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
+                        ctx.strokeStyle = "#ffd700"; ctx.strokeRect(c * TILE, r * TILE, TILE, TILE);
+                    } else if (tile === 0) {
+                        ctx.fillStyle = "white"; ctx.beginPath(); ctx.arc(c*20+10, r*20+10, 2, 0, 7); ctx.fill();
+                    } else if (tile === 2) {
+                        ctx.fillStyle = "#ffd700"; ctx.beginPath(); ctx.arc(c*20+10, r*20+10, 5, 0, 7); ctx.fill();
                     }
                 }
             }
 
-            // Draw Pacman
+            // Pacman
             ctx.fillStyle = powerMode > 0 ? "white" : "yellow";
             ctx.beginPath();
-            ctx.arc(pacman.x * TILE + 10, pacman.y * TILE + 10, 8, 0.2, Math.PI * 2 - 0.2);
-            ctx.lineTo(pacman.x * TILE + 10, pacman.y * TILE + 10);
-            ctx.fill();
+            ctx.arc(pacman.x*20+10, pacman.y*20+10, 8, 0.2, 6.1);
+            ctx.lineTo(pacman.x*20+10, pacman.y*20+10); ctx.fill();
 
-            // Draw Ghosts
+            // Ghosts
             ghosts.forEach(g => {
                 ctx.fillStyle = powerMode > 0 ? "#80d4ff" : g.color;
-                ctx.beginPath(); ctx.arc(g.x * TILE + 10, g.y * TILE + 10, 8, 0, 7); ctx.fill();
+                ctx.beginPath(); ctx.arc(g.x*20+10, g.y*20+10, 8, 0, 7); ctx.fill();
+                // Little eyes
+                ctx.fillStyle = "white"; ctx.fillRect(g.x*20+5, g.y*20+5, 3, 3); ctx.fillRect(g.x*20+12, g.y*20+5, 3, 3);
             });
         }
 
         function endGame(msg) {
             gameOver = true;
-            canvas.classList.add('shake');
             document.getElementById('statusText').innerText = msg;
             document.getElementById('overlay').style.display = 'flex';
         }
 
         function loop() {
-            update();
-            draw();
-            if (!gameOver) setTimeout(loop, 150);
+            update(); draw();
+            if (!gameOver) setTimeout(loop, 160);
         }
 
-        // Controls
+        // Snowflake Logic
+        const sCanvas = document.getElementById('snowCanvas');
+        const sCtx = sCanvas.getContext('2d');
+        let snowflakes = Array(50).fill().map(() => ({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, r: Math.random()*3+1, v: Math.random()*2+1 }));
+        
+        function drawSnow() {
+            sCanvas.width = window.innerWidth; sCanvas.height = window.innerHeight;
+            sCtx.fillStyle = "white";
+            snowflakes.forEach(s => {
+                sCtx.beginPath(); sCtx.arc(s.x, s.y, s.r, 0, 7); sCtx.fill();
+                s.y += s.v; if (s.y > sCanvas.height) s.y = -10;
+            });
+            requestAnimationFrame(drawSnow);
+        }
+
         document.getElementById('up').onclick = () => pacman.nextDir = 3;
         document.getElementById('down').onclick = () => pacman.nextDir = 1;
         document.getElementById('left').onclick = () => pacman.nextDir = 2;
         document.getElementById('right').onclick = () => pacman.nextDir = 0;
         
-        window.addEventListener('keydown', e => {
-            if(e.key === "ArrowUp") pacman.nextDir = 3;
-            if(e.key === "ArrowDown") pacman.nextDir = 1;
-            if(e.key === "ArrowLeft") pacman.nextDir = 2;
-            if(e.key === "ArrowRight") pacman.nextDir = 0;
-        });
-
         loop();
+        drawSnow();
     </script>
 </body>
 </html>
