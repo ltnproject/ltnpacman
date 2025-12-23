@@ -2,288 +2,223 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Christmas Pac-Mas 🎅</title>
     <style>
         :root {
             --gold: #ffd700;
             --xmas-red: #c0392b;
             --xmas-green: #27ae60;
-            --snow-white: #f0f8ff;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
-            background: linear-gradient(135deg, #4b0000, #002200);
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            min-height: 100vh; font-family: 'Segoe UI', 'Courier New', monospace; color: #fff;
+            background: radial-gradient(circle, #4b0000, #001100);
+            display: flex; flex-direction: column; align-items: center;
+            height: 100vh; font-family: 'Arial Black', sans-serif; color: #fff;
             overflow: hidden; touch-action: none;
         }
 
-        /* --- FESTIVE DECORATIONS --- */
-        .lightrope {
-            position: fixed; top: 0; width: 100%; display: flex; justify-content: space-around; z-index: 100;
+        /* --- SCREEN EFFECTS --- */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            20% { transform: translate(-3px, 0px) rotate(-1deg); }
+            40% { transform: translate(3px, 2px) rotate(1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            80% { transform: translate(3px, 1px) rotate(-1deg); }
+            100% { transform: translate(1px, -2px) rotate(0deg); }
         }
-        .lightrope span {
-            width: 10px; height: 20px; border-radius: 50%; animation: flash 1.5s infinite;
+        .shake-effect { animation: shake 0.3s; }
+
+        .flash-effect {
+            position: fixed; inset: 0; background: white; opacity: 0;
+            pointer-events: none; z-index: 1000;
         }
-        .lightrope span:nth-child(odd) { background: var(--xmas-red); }
-        .lightrope span:nth-child(even) { background: var(--xmas-green); animation-delay: 0.5s; }
+        @keyframes flashAnim { 0% { opacity: 0.5; } 100% { opacity: 0; } }
 
-        @keyframes flash { 0%, 100% { opacity: 1; box-shadow: 0 0 8px #fff; } 50% { opacity: 0.3; } }
-
-        .snow-container { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
-        .snowflake { position: absolute; top: -10%; color: white; animation: fall linear infinite; }
-        @keyframes fall { to { transform: translateY(110vh) rotate(360deg); } }
-
-        /* --- RESPONSIVE GAME CONTAINER --- */
-        #gameContainer {
-            position: relative; z-index: 10; width: 95%; max-width: 580px;
-            background: rgba(0, 0, 0, 0.85); padding: 15px;
-            border-radius: 20px; border: 3px solid var(--gold);
-            box-shadow: 0 0 30px rgba(0,0,0,0.5); text-align: center;
+        /* --- UI ELEMENTS --- */
+        #gameWrapper {
+            display: flex; flex-direction: row; align-items: center; justify-content: center;
+            width: 100%; height: 100%; padding: 20px; gap: 40px;
         }
-
-        #banner { font-size: 1rem; color: var(--gold); margin-bottom: 5px; font-weight: bold; }
-        #title { font-size: 1.8rem; margin-bottom: 10px; text-shadow: 0 0 10px var(--xmas-red); }
 
         canvas {
-            background: #000; border: 4px solid #1a472a; border-radius: 8px;
-            max-width: 100%; height: auto; max-height: 60vh; /* Prevents overflow on mobile */
-            display: block; margin: 0 auto;
+            background: #000; border: 5px solid var(--gold); border-radius: 12px;
+            max-height: 85vh; max-width: 65vw; height: auto; width: auto;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
         }
 
-        /* --- UI CONTROLS --- */
-        .stats-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding: 0 10px; }
+        .control-side { display: flex; flex-direction: column; gap: 20px; }
         
-        #audioControl {
-            background: var(--xmas-green); border: 2px solid var(--gold);
-            padding: 6px 12px; border-radius: 15px; color: white; cursor: pointer; font-size: 0.8rem;
-        }
-
-        #controls {
-            margin-top: 15px; display: grid; grid-template-columns: repeat(3, 1fr);
-            gap: 10px; width: 100%; max-width: 250px; margin-left: auto; margin-right: auto;
-        }
-
         .btn {
-            aspect-ratio: 1/1; background: rgba(192, 57, 43, 0.8);
-            border: 2px solid var(--gold); color: #fff; font-size: 24px;
-            cursor: pointer; border-radius: 15px; display: flex; align-items: center; justify-content: center;
+            width: 85px; height: 85px; background: rgba(192, 57, 43, 0.9);
+            border: 3px solid var(--gold); color: #fff; font-size: 32px;
+            cursor: pointer; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 0 #8e1e14; transition: 0.1s;
         }
-        .btn:active { transform: scale(0.9); background: var(--xmas-red); }
+        .btn:active { transform: translateY(4px); box-shadow: 0 2px 0 #8e1e14; background: var(--gold); color: #000; }
 
-        #statusMessage {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(0,0,0,0.9); padding: 20px; border: 3px solid var(--gold);
-            border-radius: 15px; z-index: 20; width: 80%; display: none;
+        #scoreBox { position: absolute; top: 20px; font-size: 28px; color: var(--gold); text-shadow: 2px 2px #000; }
+
+        #statusOverlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            display: none; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 200;
+        }
+
+        @media (max-width: 900px) {
+            #gameWrapper { flex-direction: column; justify-content: flex-end; padding-bottom: 50px; }
+            canvas { max-width: 95vw; max-height: 50vh; }
+            .control-side { flex-direction: row; }
+            .btn { width: 70px; height: 70px; }
         }
     </style>
 </head>
 <body>
 
-    <div class="lightrope" id="rope"></div>
-    <div class="snow-container" id="snow"></div>
+    <div id="flash" class="flash-effect"></div>
+    <div id="scoreBox">SCORE: 0</div>
 
-    <div id="gameContainer">
-        <div id="banner">🎄 Merry Christmas 2025! ❄️</div>
-        <div id="title">🎅 PAC-MAS ADVENTURE</div>
-        
-        <div class="stats-bar">
-            <button id="audioControl">🔊 Music</button>
-            <div id="score" style="color: var(--gold); font-weight: bold;">SCORE: 0</div>
+    <div id="gameWrapper">
+        <div class="control-side">
+            <button class="btn" id="left">◄</button>
         </div>
 
         <canvas id="gameCanvas" width="560" height="620"></canvas>
-        
-        <div id="statusMessage">
-            <h2 id="msgText"></h2>
-            <button id="restartBtn" class="btn" style="width: auto; height: auto; padding: 10px 20px; margin: 15px auto;">🎁 RESTART</button>
-        </div>
 
-        <div id="controls">
-            <div style="grid-column: 2;"><button class="btn" id="up">🎄</button></div>
-            <div style="grid-row: 2; grid-column: 1;"><button class="btn" id="left">◄</button></div>
-            <div style="grid-row: 2; grid-column: 2;"><button class="btn" id="down">🎅</button></div>
-            <div style="grid-row: 2; grid-column: 3;"><button class="btn" id="right">►</button></div>
+        <div class="control-side">
+            <div style="display:flex; flex-direction:column; gap:15px; align-items:center;">
+                <button class="btn" id="up">🎄</button>
+                <div style="display:flex; gap:15px;">
+                    <button class="btn" id="down">🎅</button>
+                    <button class="btn" id="right">►</button>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        // --- DECORATIONS ---
-        const rope = document.getElementById('rope');
-        for(let i=0; i<20; i++) rope.appendChild(document.createElement('span'));
-        setInterval(() => {
-            const flake = document.createElement('div');
-            flake.className = 'snowflake'; flake.innerHTML = '❄';
-            flake.style.left = Math.random() * 100 + 'vw';
-            flake.style.fontSize = (Math.random() * 10 + 10) + 'px';
-            flake.style.animationDuration = (Math.random() * 3 + 3) + 's';
-            document.getElementById('snow').appendChild(flake);
-            setTimeout(() => flake.remove(), 5000);
-        }, 200);
+    <div id="statusOverlay">
+        <h1 id="statusText" style="font-size: 45px; margin-bottom: 25px; text-align: center;"></h1>
+        <button id="restartBtn" class="btn" style="width:220px; border-radius:15px; height: 60px;">🎁 RESTART</button>
+    </div>
 
-        // --- GAME ENGINE ---
+    <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const scoreEl = document.getElementById('score');
-        const statusBox = document.getElementById('statusMessage');
-        const msgText = document.getElementById('msgText');
-
         const TILE = 20, ROWS = 31, COLS = 28;
-        let score = 0, gameOver = false, totalPellets = 0, giftPos = null, superMode = 0;
+        let score = 0, gameOver = false, pellets = 0, superT = 0;
 
         const maze = [
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
             [1,2,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,2,1],
-            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
-            [1,0,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,0,1],
-            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
+            [1,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,1,1,1,3,1,1,3,1,1,1,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,1,1,1,3,3,1,1,1,3,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
             [3,3,3,3,3,3,0,3,3,3,1,3,3,3,3,3,3,1,3,3,3,0,3,3,3,3,3,3],
-            [1,1,1,1,1,1,0,1,1,3,1,3,3,3,3,3,3,1,3,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,3,3,3,3,3,3,3,3,3,1,1,0,1,1,1,1,1,1],
-            [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
             [1,1,1,1,1,1,0,1,1,3,1,1,1,1,1,1,1,1,3,1,1,0,1,1,1,1,1,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
-            [1,0,1,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,1,0,1],
             [1,2,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,2,1],
             [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
-            [1,1,1,0,1,1,0,1,1,0,1,1,1,1,1,1,1,1,0,1,1,0,1,1,0,1,1,1],
-            [1,0,0,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,1,1,0,0,0,0,0,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
-            [1,0,1,1,1,1,1,1,1,1,1,1,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1],
             [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
             [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
         ];
 
-        for(let r=0; r<ROWS; r++) for(let c=0; c<COLS; c++) if(maze[r][c] === 0 || maze[r][c] === 2) totalPellets++;
+        for(let r=0; r<maze.length; r++) for(let c=0; c<COLS; c++) if(maze[r][c] < 2) pellets++;
 
-        let pacman = { x: 14, y: 23, dir: 0, nextDir: 0, mouthOpen: true };
+        let pacman = { x: 14, y: 12, dir: 0, next: 0, mouth: 1 };
         let ghosts = [
-            {x: 14, y: 11, color: '#ff4d4d', dir: 0, scared: false},
-            {x: 12, y: 14, color: '#2ecc71', dir: 2, scared: false},
-            {x: 14, y: 14, color: '#3498db', dir: 3, scared: false},
-            {x: 16, y: 14, color: '#f1c40f', dir: 1, scared: false}
+            {x: 1, y: 1, c: '#ff4d4d', d: 0, s: false},
+            {x: 26, y: 1, c: '#2ecc71', d: 2, s: false}
         ];
 
-        setInterval(() => { if(!gameOver && !giftPos) { giftPos = {x: 14, y: 14}; } }, 15000);
+        function triggerEffect(type) {
+            if(type === 'shake') {
+                canvas.classList.add('shake-effect');
+                setTimeout(() => canvas.classList.remove('shake-effect'), 300);
+            } else if(type === 'flash') {
+                const f = document.getElementById('flash');
+                f.style.animation = 'flashAnim 0.2s ease-out';
+                setTimeout(() => f.style.animation = '', 200);
+            }
+        }
 
-        function drawMaze() {
-            for(let r = 0; r < ROWS; r++) {
-                for(let c = 0; c < COLS; c++) {
+        function draw() {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            for(let r=0; r<maze.length; r++) {
+                for(let c=0; c<COLS; c++) {
                     if(maze[r][c] === 1) {
                         ctx.fillStyle = '#0a2e0a'; ctx.fillRect(c*TILE, r*TILE, TILE, TILE);
-                        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 0.5; ctx.strokeRect(c*TILE, r*TILE, TILE, TILE);
+                        ctx.strokeStyle = '#ffd700'; ctx.lineWidth = 1; ctx.strokeRect(c*TILE, r*TILE, TILE, TILE);
                     } else if(maze[r][c] === 0) {
-                        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c*TILE+TILE/2, r*TILE+TILE/2, 2, 0, 7); ctx.fill();
+                        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(c*TILE+10, r*TILE+10, 2, 0, 7); ctx.fill();
                     } else if(maze[r][c] === 2) {
-                        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(c*TILE+TILE/2, r*TILE+TILE/2, 6, 0, 7); ctx.fill();
+                        ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(c*TILE+10, r*TILE+10, 6, 0, 7); ctx.fill();
                     }
                 }
             }
-            if(giftPos) { ctx.font = "16px Arial"; ctx.fillText("🎁", giftPos.x*TILE+2, giftPos.y*TILE+16); }
-        }
 
-        function drawPacman() {
+            // Pacman 🎅
             ctx.save();
-            ctx.translate(pacman.x*TILE+TILE/2, pacman.y*TILE+TILE/2);
+            ctx.translate(pacman.x*TILE+10, pacman.y*TILE+10);
             ctx.rotate(pacman.dir * Math.PI/2);
-            ctx.fillStyle = superMode > 0 ? (superMode % 2 ? '#fff' : '#ff0000') : '#ffff00';
+            ctx.fillStyle = superT > 0 ? '#fff' : '#ffff00';
             ctx.beginPath();
-            let mouth = pacman.mouthOpen ? 0.6 : 0.1;
-            ctx.arc(0, 0, TILE/2-2, mouth, Math.PI*2-mouth); ctx.lineTo(0,0); ctx.fill();
-            ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.moveTo(-5,-5); ctx.lineTo(5,-5); ctx.lineTo(0,-12); ctx.fill();
+            let m = pacman.mouth ? 0.6 : 0.1;
+            ctx.arc(0,0, 9, m, Math.PI*2-m); ctx.lineTo(0,0); ctx.fill();
             ctx.restore();
-        }
 
-        function drawGhosts() {
+            // Ghosts ☃️
             ghosts.forEach(g => {
-                if(g.scared) {
-                    ctx.fillStyle = '#abdcfb'; // Shivering Blue Snowman
-                    ctx.beginPath(); ctx.arc(g.x*TILE+TILE/2, g.y*TILE+TILE/2, TILE/2-2, 0, 7); ctx.fill();
-                    ctx.fillStyle = '#ff6600'; ctx.fillRect(g.x*TILE+8, g.y*TILE+10, 4, 2); // Carrot nose
-                } else {
-                    ctx.fillStyle = g.color;
-                    ctx.beginPath(); ctx.arc(g.x*TILE+TILE/2, g.y*TILE+TILE/3, TILE/2-2, Math.PI, 0);
-                    ctx.lineTo(g.x*TILE+TILE-2, g.y*TILE+TILE-2); ctx.lineTo(g.x*TILE+2, g.y*TILE+TILE-2); ctx.fill();
-                }
+                ctx.fillStyle = g.s ? '#abdcfb' : g.c;
+                ctx.beginPath(); ctx.arc(g.x*TILE+10, g.y*TILE+10, 8, 0, 7); ctx.fill();
             });
         }
 
-        function move() {
+        function update() {
             if(gameOver) return;
-            let speed = superMode > 0 ? 2 : 1;
-            for(let i=0; i<speed; i++) {
-                let dx = [1, 0, -1, 0][pacman.nextDir], dy = [0, 1, 0, -1][pacman.nextDir];
-                if(maze[pacman.y + dy]?.[pacman.x + dx] !== 1) pacman.dir = pacman.nextDir;
-                dx = [1, 0, -1, 0][pacman.dir]; dy = [0, 1, 0, -1][pacman.dir];
-                if(maze[pacman.y + dy]?.[pacman.x + dx] !== 1) {
+            let spd = superT > 0 ? 2 : 1;
+            for(let i=0; i<spd; i++) {
+                let dx = [1,0,-1,0][pacman.next], dy = [0,1,0,-1][pacman.next];
+                if(maze[pacman.y+dy]?.[pacman.x+dx] !== 1) pacman.dir = pacman.next;
+                dx = [1,0,-1,0][pacman.dir], dy = [0,1,0,-1][pacman.dir];
+                if(maze[pacman.y+dy]?.[pacman.x+dx] !== 1) {
                     pacman.x += dx; pacman.y += dy;
-                    if(giftPos && pacman.x === giftPos.x && pacman.y === giftPos.y) { superMode = 40; giftPos = null; score += 100; }
-                    if(maze[pacman.y][pacman.x] === 0 || maze[pacman.y][pacman.x] === 2) {
-                        if(maze[pacman.y][pacman.x] === 2) ghosts.forEach(g => { g.scared = true; setTimeout(()=>g.scared=false, 5000); });
-                        maze[pacman.y][pacman.x] = 3; score += 10; totalPellets--;
-                        scoreEl.innerText = "SCORE: " + score;
-                        if(totalPellets <= 0) endGame("🏆 YOU SAVED CHRISTMAS! 🏆");
+                    if(maze[pacman.y][pacman.x] === 0) { score += 10; pellets--; maze[pacman.y][pacman.x] = 3; }
+                    if(maze[pacman.y][pacman.x] === 2) { 
+                        score += 50; pellets--; maze[pacman.y][pacman.x] = 3; 
+                        superT = 50; triggerEffect('flash');
+                        ghosts.forEach(g => g.s = true);
+                        setTimeout(() => ghosts.forEach(g => g.s = false), 5000);
                     }
+                    document.getElementById('scoreBox').innerText = "SCORE: " + score;
+                    if(pellets <= 0) end("🏆 CHRISTMAS SAVED! 🏆");
                 }
             }
-            if(superMode > 0) superMode--;
-            pacman.mouthOpen = !pacman.mouthOpen;
+            if(superT > 0) superT--;
+            pacman.mouth = !pacman.mouth;
 
             ghosts.forEach(g => {
                 let gd = Math.floor(Math.random()*4);
                 let gdx = [1,0,-1,0][gd], gdy = [0,1,0,-1][gd];
                 if(maze[g.y+gdy]?.[g.x+gdx] !== 1) { g.x+=gdx; g.y+=gdy; }
-                if(g.x === pacman.x && g.y === pacman.y && !g.scared) endGame("❄️ FROZEN! GAME OVER ❄️");
+                if(g.x === pacman.x && g.y === pacman.y && !g.s) { triggerEffect('shake'); end("❄️ FROZEN! ❄️"); }
             });
         }
 
-        function endGame(txt) {
-            gameOver = true; msgText.innerText = txt; statusBox.style.display = "block";
-        }
-
-        function gameLoop() {
-            ctx.clearRect(0,0,560,620);
-            drawMaze(); move(); drawPacman(); drawGhosts();
-            if(!gameOver) setTimeout(gameLoop, 150);
-        }
-
-        document.getElementById('audioControl').onclick = () => {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const notes = [659, 659, 659, 659, 659, 659, 659, 783, 523, 587, 659];
-            notes.forEach((f, i) => {
-                let osc = audioCtx.createOscillator(); let g = audioCtx.createGain();
-                osc.frequency.value = f; osc.connect(g); g.connect(audioCtx.destination);
-                g.gain.setValueAtTime(0.05, audioCtx.currentTime + i*0.3);
-                osc.start(audioCtx.currentTime + i*0.3); osc.stop(audioCtx.currentTime + i*0.3 + 0.2);
-            });
-        };
-
-        window.addEventListener('keydown', e => {
-            if(e.key === 'ArrowRight') pacman.nextDir = 0; if(e.key === 'ArrowDown') pacman.nextDir = 1;
-            if(e.key === 'ArrowLeft') pacman.nextDir = 2; if(e.key === 'ArrowUp') pacman.nextDir = 3;
-        });
-
-        document.getElementById('up').onclick = () => pacman.nextDir = 3;
-        document.getElementById('down').onclick = () => pacman.nextDir = 1;
-        document.getElementById('left').onclick = () => pacman.nextDir = 2;
-        document.getElementById('right').onclick = () => pacman.nextDir = 0;
+        function end(t) { gameOver = true; document.getElementById('statusText').innerText = t; document.getElementById('statusOverlay').style.display = 'flex'; }
+        
+        function loop() { draw(); update(); if(!gameOver) setTimeout(loop, 80); }
+        
+        document.getElementById('up').onclick = () => pacman.next = 3;
+        document.getElementById('down').onclick = () => pacman.next = 1;
+        document.getElementById('left').onclick = () => pacman.next = 2;
+        document.getElementById('right').onclick = () => pacman.next = 0;
         document.getElementById('restartBtn').onclick = () => location.reload();
 
-        gameLoop();
+        loop();
     </script>
 </body>
 </html>
